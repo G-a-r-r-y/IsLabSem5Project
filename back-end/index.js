@@ -40,7 +40,6 @@ io.on("connection", (socket) => {
 
   // Listen for 'trigger re-render' event from any client
   socket.on("trigger re-render", () => {
-    console.log("Triggering re-render for all clients");
     io.emit("trigger re-render"); // Notify all connected clients
   });
 

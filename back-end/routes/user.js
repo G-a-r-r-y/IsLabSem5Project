@@ -1,10 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../db/index");
+const {
+  generateRSAKeys,
+  encryptMessage,
+  encryptedMessageToString,
+  stringToEncryptedMessageArray,
+  decryptMessage,
+} = require("./encryption");
+
+const { publicKey, privateKey } = generateRSAKeys();
 
 router.post("/login", async (req, res) => {
   try {
-    console.log(req.body);
     const { username } = req.body;
     const existingUser = await User.findOne({ username });
 
@@ -29,9 +37,12 @@ router.post("/add-msg", async (req, res) => {
       return res.status(404).json({ error: "User not found" });
     }
 
-    // Push the message as an object with 'text' and 'date'
+    const encryptedMessageArray = encryptMessage(message, publicKey);
+    const encryptedMessageString = encryptedMessageToString(
+      encryptedMessageArray
+    );
     user.messages.push({
-      text: message,
+      text: encryptedMessageString,
       date: new Date(),
     });
 
@@ -44,6 +55,14 @@ router.post("/add-msg", async (req, res) => {
 });
 
 router.get("/messages", async (req, res) => {
+  const decryptionFunction = (msg) => {
+    const encryptedArrayFromString = stringToEncryptedMessageArray(msg);
+    const decryptedMessage = decryptMessage(
+      encryptedArrayFromString,
+      privateKey
+    );
+    return decryptedMessage;
+  };
   try {
     const usersWithMessages = await User.find({}, "username messages");
     const messages = usersWithMessages.flatMap((user) =>
@@ -53,8 +72,14 @@ router.get("/messages", async (req, res) => {
         date: msg.date,
       }))
     );
-    messages.sort((a, b) => new Date(a.date) - new Date(b.date));
-    res.json(messages);
+    const decryptedData = messages.map((item) => {
+      return {
+        ...item,
+        msg: decryptionFunction(item.msg),
+      };
+    });
+    decryptedData.sort((a, b) => new Date(a.date) - new Date(b.date));
+    res.json(decryptedData);
   } catch (error) {
     console.error("Error fetching users and messages:", error);
     res.status(500).json({ error: "Failed to fetch users and their messages" });

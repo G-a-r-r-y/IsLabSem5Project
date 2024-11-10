@@ -17,9 +17,7 @@ const ChatRoom = () => {
   const getMessages = async () => {
     try {
       const url = `${import.meta.env.VITE_BACKEND_URL}/user/messages`;
-      console.log(url);
       const response = await axios.get(url);
-      console.log(response.data);
       setMessages2(response.data);
     } catch (error) {
       console.error("Error fetching messages:", error);
@@ -51,9 +49,9 @@ const ChatRoom = () => {
           message: inputMessage,
         }
       );
-      console.log(response.data.message);
       setMsgSent(true); // Trigger re-fetch on new message
       socket.current.emit("trigger re-render"); // Emit event to all clients to trigger re-render
+      setInputMessage("");
     } catch (error) {
       console.error("Error adding message:", error);
     }
